@@ -7,6 +7,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { AuthPage } from "@/components/auth/AuthPage";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Dashboard } from "@/pages/Dashboard";
+import { MyShifts } from "@/pages/MyShifts";
+import { AdminPanel } from "@/pages/AdminPanel";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,11 +24,11 @@ const App = () => (
             <Route path="/auth" element={<AuthPage />} />
             <Route element={<MainLayout />}>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/my-shifts" element={<Dashboard />} />
+              <Route path="/my-shifts" element={<MyShifts />} />
               <Route path="/summary" element={<Dashboard />} />
               <Route path="/global-calendar" element={<Dashboard />} />
               <Route path="/logs" element={<Dashboard />} />
-              <Route path="/users" element={<Dashboard />} />
+              <Route path="/users" element={<AdminPanel />} />
               <Route path="/settings" element={<Dashboard />} />
             </Route>
             <Route path="*" element={<NotFound />} />
