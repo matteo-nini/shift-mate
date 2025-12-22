@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useUsers } from '@/hooks/useUsers';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { formatDate, formatCurrency } from '@/lib/shiftUtils';
+import { parseShiftsCSV, generateSampleCSV, ParsedShift } from '@/lib/csvUtils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -49,8 +50,16 @@ import {
   Clock,
   Shield,
   Save,
+  UserPlus,
+  Upload,
+  Download,
+  AlertCircle,
+  CheckCircle,
+  Loader2,
 } from 'lucide-react';
 import { Database } from '@/integrations/supabase/types';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 type UserRole = Database['public']['Enums']['user_role'];
 
@@ -68,14 +77,42 @@ interface EditUserData {
   custom_shift_rate: number | null;
 }
 
+interface NewUserData {
+  email: string;
+  password: string;
+  username: string;
+  fullName: string;
+  role: UserRole;
+  isActive: boolean;
+}
+
 export function AdminPanel() {
-  const { users, loading: usersLoading, updateUser, deleteUser } = useUsers();
+  const { users, loading: usersLoading, updateUser, deleteUser, refetch } = useUsers();
   const { settings, loading: settingsLoading, updateMultipleSettings } = useSystemSettings();
   
   const [editingUser, setEditingUser] = useState<EditUserData | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
   const [pendingSettings, setPendingSettings] = useState(settings);
+  
+  // New user state
+  const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [newUser, setNewUser] = useState<NewUserData>({
+    email: '',
+    password: '',
+    username: '',
+    fullName: '',
+    role: 'user',
+    isActive: true,
+  });
+
+  // CSV import state
+  const [isCSVModalOpen, setIsCSVModalOpen] = useState(false);
+  const [csvShifts, setCsvShifts] = useState<ParsedShift[]>([]);
+  const [csvErrors, setCsvErrors] = useState<string[]>([]);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Update pending settings when loaded
   useState(() => {
@@ -135,6 +172,133 @@ export function AdminPanel() {
     await updateMultipleSettings(pendingSettings);
   };
 
+  // Create new user
+  const handleCreateUser = async () => {
+    if (!newUser.email || !newUser.password || !newUser.username) {
+      toast.error('Compila tutti i campi obbligatori');
+      return;
+    }
+
+    if (newUser.password.length < 6) {
+      toast.error('La password deve avere almeno 6 caratteri');
+      return;
+    }
+
+    setIsCreatingUser(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: newUser.email,
+          password: newUser.password,
+          username: newUser.username,
+          fullName: newUser.fullName || null,
+          role: newUser.role,
+          isActive: newUser.isActive,
+        },
+      });
+
+      if (error) throw error;
+
+      if (!data?.success) {
+        throw new Error(data?.error || 'Errore nella creazione utente');
+      }
+
+      toast.success('Utente creato con successo');
+      setIsNewUserModalOpen(false);
+      setNewUser({
+        email: '',
+        password: '',
+        username: '',
+        fullName: '',
+        role: 'user',
+        isActive: true,
+      });
+      refetch();
+    } catch (err) {
+      console.error('Error creating user:', err);
+      toast.error(err instanceof Error ? err.message : 'Errore nella creazione utente');
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
+
+  // CSV Import handlers
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      const userMappings = users.map(u => ({
+        id: u.id,
+        username: u.username,
+        full_name: u.full_name,
+      }));
+
+      const result = parseShiftsCSV(content, userMappings);
+      setCsvShifts(result.shifts);
+      setCsvErrors(result.errors);
+      setIsCSVModalOpen(true);
+    };
+    reader.readAsText(file);
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDownloadSample = () => {
+    const csv = generateSampleCSV();
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'esempio_turni.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportCSV = async () => {
+    const validShifts = csvShifts.filter(s => s.userId);
+    if (validShifts.length === 0) {
+      toast.error('Nessun turno valido da importare');
+      return;
+    }
+
+    setIsImporting(true);
+
+    try {
+      const shiftsToInsert = validShifts.map(shift => ({
+        assigned_to_user_id: shift.userId!,
+        created_by_user_id: shift.userId!, // Will be overwritten by current admin
+        date: shift.date,
+        start_time: shift.startTime,
+        end_time: shift.endTime,
+        notes: shift.notes || null,
+        status: shift.status,
+      }));
+
+      const { error } = await supabase
+        .from('global_shifts')
+        .insert(shiftsToInsert);
+
+      if (error) throw error;
+
+      toast.success(`${validShifts.length} turni importati con successo`);
+      setIsCSVModalOpen(false);
+      setCsvShifts([]);
+      setCsvErrors([]);
+    } catch (err) {
+      console.error('Error importing shifts:', err);
+      toast.error('Errore nell\'importazione dei turni');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const totalUsers = users.length;
   const activeUsers = users.filter(u => u.is_active).length;
 
@@ -155,9 +319,32 @@ export function AdminPanel() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-display font-bold text-foreground">Pannello Admin</h1>
-        <p className="text-muted-foreground">Gestisci utenti e impostazioni di sistema</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-display font-bold text-foreground">Pannello Admin</h1>
+          <p className="text-muted-foreground">Gestisci utenti e impostazioni di sistema</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleDownloadSample}>
+            <Download className="w-4 h-4 mr-2" />
+            Esempio CSV
+          </Button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept=".csv"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="w-4 h-4 mr-2" />
+            Importa CSV
+          </Button>
+          <Button onClick={() => setIsNewUserModalOpen(true)}>
+            <UserPlus className="w-4 h-4 mr-2" />
+            Nuovo Utente
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -179,8 +366,8 @@ export function AdminPanel() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <Card>
             <CardContent className="flex items-center gap-4 p-6">
-              <div className="p-3 bg-shift-contract/10 rounded-xl">
-                <UserCheck className="w-6 h-6 text-shift-contract" />
+              <div className="p-3 bg-success/10 rounded-xl">
+                <UserCheck className="w-6 h-6 text-success" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Utenti Attivi</p>
@@ -193,8 +380,8 @@ export function AdminPanel() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Card>
             <CardContent className="flex items-center gap-4 p-6">
-              <div className="p-3 bg-shift-extra/10 rounded-xl">
-                <DollarSign className="w-6 h-6 text-shift-extra" />
+              <div className="p-3 bg-accent/10 rounded-xl">
+                <DollarSign className="w-6 h-6 text-accent" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Tariffa Default</p>
@@ -372,13 +559,13 @@ export function AdminPanel() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Shield className="w-5 h-5" />
-                  Permessi Utenti
+                  Permessi e Accesso
                 </CardTitle>
                 <CardDescription>
-                  Configura cosa possono fare gli utenti
+                  Configura i permessi degli utenti e l'accesso al sistema
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label>Modifica Tariffe Personali</Label>
@@ -394,11 +581,27 @@ export function AdminPanel() {
                   />
                 </div>
 
-                {!pendingSettings.users_can_edit_rates && (
-                  <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-sm">
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Registrazione Pubblica</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Permetti a chiunque di registrarsi autonomamente
+                      </p>
+                    </div>
+                    <Switch
+                      checked={pendingSettings.allow_public_registration}
+                      onCheckedChange={checked =>
+                        setPendingSettings({ ...pendingSettings, allow_public_registration: checked })
+                      }
+                    />
+                  </div>
+                </div>
+
+                {!pendingSettings.allow_public_registration && (
+                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 text-sm">
                     <p>
-                      Quando disabilitato, gli utenti non potranno modificare le loro tariffe personali.
-                      Solo gli amministratori potranno impostarle.
+                      <strong>Registrazione Disabilitata:</strong> Solo gli amministratori potranno creare nuovi account utente dalla gestione utenze.
                     </p>
                   </div>
                 )}
@@ -415,6 +618,218 @@ export function AdminPanel() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* New User Modal */}
+      <Dialog open={isNewUserModalOpen} onOpenChange={setIsNewUserModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5" />
+              Crea Nuovo Utente
+            </DialogTitle>
+            <DialogDescription>Inserisci i dati del nuovo utente</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-email">Email *</Label>
+              <Input
+                id="new-email"
+                type="email"
+                value={newUser.email}
+                onChange={e => setNewUser({ ...newUser, email: e.target.value })}
+                placeholder="email@esempio.it"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Password *</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newUser.password}
+                onChange={e => setNewUser({ ...newUser, password: e.target.value })}
+                placeholder="Minimo 6 caratteri"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new-username">Username *</Label>
+              <Input
+                id="new-username"
+                type="text"
+                value={newUser.username}
+                onChange={e => setNewUser({ ...newUser, username: e.target.value })}
+                placeholder="nomeutente"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new-fullname">Nome Completo</Label>
+              <Input
+                id="new-fullname"
+                type="text"
+                value={newUser.fullName}
+                onChange={e => setNewUser({ ...newUser, fullName: e.target.value })}
+                placeholder="Mario Rossi"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Ruolo</Label>
+                <Select
+                  value={newUser.role}
+                  onValueChange={(value: UserRole) => setNewUser({ ...newUser, role: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">Utente</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Stato</Label>
+                <div className="flex items-center gap-2 h-10">
+                  <Switch
+                    checked={newUser.isActive}
+                    onCheckedChange={checked => setNewUser({ ...newUser, isActive: checked })}
+                  />
+                  <span className="text-sm">{newUser.isActive ? 'Attivo' : 'Disabilitato'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsNewUserModalOpen(false)}>
+              Annulla
+            </Button>
+            <Button onClick={handleCreateUser} disabled={isCreatingUser}>
+              {isCreatingUser ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creazione...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Crea Utente
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* CSV Import Modal */}
+      <Dialog open={isCSVModalOpen} onOpenChange={setIsCSVModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5" />
+              Importa Turni da CSV
+            </DialogTitle>
+            <DialogDescription>
+              Verifica i turni prima dell'importazione
+            </DialogDescription>
+          </DialogHeader>
+
+          {csvErrors.length > 0 && (
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+              <h4 className="font-medium text-destructive flex items-center gap-2 mb-2">
+                <AlertCircle className="w-4 h-4" />
+                Errori nel file CSV
+              </h4>
+              <ul className="text-sm text-destructive space-y-1">
+                {csvErrors.map((error, i) => (
+                  <li key={i}>• {error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {csvShifts.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  {csvShifts.filter(s => s.userId).length} turni validi su {csvShifts.length} totali
+                </p>
+              </div>
+
+              <div className="overflow-x-auto border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Stato</TableHead>
+                      <TableHead>Dipendente</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Orario</TableHead>
+                      <TableHead>Note</TableHead>
+                      <TableHead>Stato Turno</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {csvShifts.map((shift, i) => (
+                      <TableRow key={i} className={cn(!shift.userId && 'bg-destructive/5')}>
+                        <TableCell>
+                          {shift.userId ? (
+                            <CheckCircle className="w-4 h-4 text-success" />
+                          ) : (
+                            <AlertCircle className="w-4 h-4 text-destructive" />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <span className="font-medium">{shift.userName}</span>
+                            {shift.error && (
+                              <p className="text-xs text-destructive">{shift.error}</p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{formatDate(shift.date)}</TableCell>
+                        <TableCell>{shift.startTime} - {shift.endTime}</TableCell>
+                        <TableCell className="max-w-[200px] truncate">{shift.notes || '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant={shift.status === 'paid' ? 'default' : 'secondary'}>
+                            {shift.status === 'paid' ? 'Pagato' : 'In Attesa'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCSVModalOpen(false)}>
+              Annulla
+            </Button>
+            <Button 
+              onClick={handleImportCSV} 
+              disabled={isImporting || csvShifts.filter(s => s.userId).length === 0}
+            >
+              {isImporting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Importazione...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Importa {csvShifts.filter(s => s.userId).length} Turni
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit User Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
