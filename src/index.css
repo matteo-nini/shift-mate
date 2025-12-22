@@ -12,7 +12,77 @@
 
 @layer base {
   :root {
-    /* Dark theme by default - Professional shift management */
+    /* Light theme by default - Professional & Clean */
+    --background: 220 20% 97%;
+    --foreground: 222 47% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 15%;
+
+    --primary: 217 91% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 94%;
+    --secondary-foreground: 222 47% 20%;
+
+    --muted: 220 14% 92%;
+    --muted-foreground: 220 9% 45%;
+
+    --accent: 160 70% 40%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 145 60% 40%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 15%;
+
+    --border: 220 13% 88%;
+    --input: 220 13% 91%;
+    --ring: 217 91% 50%;
+
+    --radius: 0.75rem;
+
+    /* Custom tokens */
+    --contract: 217 91% 50%;
+    --contract-foreground: 0 0% 100%;
+    --extra: 30 90% 50%;
+    --extra-foreground: 0 0% 100%;
+    --paid: 145 60% 40%;
+    --pending: 38 92% 50%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 50%) 0%, hsl(245 82% 60%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(160 70% 40%) 0%, hsl(180 60% 45%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 20% 98%) 100%);
+    --gradient-glass: linear-gradient(135deg, hsla(220, 20%, 100%, 0.9) 0%, hsla(220, 20%, 98%, 0.7) 100%);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsla(222, 47%, 0%, 0.05);
+    --shadow-md: 0 4px 6px -1px hsla(222, 47%, 0%, 0.08), 0 2px 4px -2px hsla(222, 47%, 0%, 0.05);
+    --shadow-lg: 0 10px 15px -3px hsla(222, 47%, 0%, 0.1), 0 4px 6px -4px hsla(222, 47%, 0%, 0.05);
+    --shadow-glow: 0 0 20px hsla(217, 91%, 50%, 0.15);
+    --shadow-accent-glow: 0 0 20px hsla(160, 70%, 40%, 0.15);
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 20%;
+    --sidebar-primary: 217 91% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 222 47% 15%;
+    --sidebar-border: 220 13% 90%;
+    --sidebar-ring: 217 91% 50%;
+  }
+
+  .dark {
+    /* Dark theme */
     --background: 222 47% 6%;
     --foreground: 210 40% 98%;
 
@@ -31,7 +101,7 @@
     --muted: 222 47% 12%;
     --muted-foreground: 215 20% 55%;
 
-    --accent: 30 100% 50%;
+    --accent: 160 70% 50%;
     --accent-foreground: 222 47% 6%;
 
     --destructive: 0 72% 51%;
@@ -47,8 +117,6 @@
     --input: 222 47% 14%;
     --ring: 217 91% 60%;
 
-    --radius: 0.75rem;
-
     /* Custom tokens */
     --contract: 217 91% 60%;
     --contract-foreground: 210 40% 98%;
@@ -59,7 +127,7 @@
 
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(245 82% 67%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(30 100% 50%) 0%, hsl(38 92% 50%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(160 70% 50%) 0%, hsl(180 60% 55%) 100%);
     --gradient-card: linear-gradient(180deg, hsl(222 47% 10%) 0%, hsl(222 47% 8%) 100%);
     --gradient-glass: linear-gradient(135deg, hsla(222, 47%, 20%, 0.3) 0%, hsla(222, 47%, 12%, 0.1) 100%);
 
@@ -68,7 +136,7 @@
     --shadow-md: 0 4px 6px -1px hsla(222, 47%, 0%, 0.4), 0 2px 4px -2px hsla(222, 47%, 0%, 0.3);
     --shadow-lg: 0 10px 15px -3px hsla(222, 47%, 0%, 0.5), 0 4px 6px -4px hsla(222, 47%, 0%, 0.4);
     --shadow-glow: 0 0 20px hsla(217, 91%, 60%, 0.3);
-    --shadow-accent-glow: 0 0 20px hsla(30, 100%, 50%, 0.3);
+    --shadow-accent-glow: 0 0 20px hsla(160, 70%, 50%, 0.3);
 
     /* Sidebar */
     --sidebar-background: 222 47% 7%;
@@ -79,41 +147,6 @@
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 222 47% 14%;
     --sidebar-ring: 217 91% 60%;
-  }
-
-  .light {
-    --background: 0 0% 98%;
-    --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 217 91% 50%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
-    --accent: 30 100% 50%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 222 47% 11%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 217 91% 50%;
-    --contract: 217 91% 50%;
-    --extra: 30 100% 50%;
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 217 91% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 96%;
-    --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 220 13% 91%;
   }
 }
 
@@ -149,23 +182,23 @@
   }
 
   .shift-badge-contract {
-    @apply bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 rounded-full text-xs font-medium;
+    @apply bg-primary/15 text-primary border border-primary/25 px-2 py-0.5 rounded-full text-xs font-medium;
   }
 
   .shift-badge-extra {
-    @apply bg-accent/20 text-accent border border-accent/30 px-2 py-0.5 rounded-full text-xs font-medium;
+    @apply bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/25 px-2 py-0.5 rounded-full text-xs font-medium;
   }
 
   .status-badge-pending {
-    @apply bg-warning/20 text-warning border border-warning/30 px-2 py-0.5 rounded-full text-xs font-medium;
+    @apply bg-warning/15 text-amber-600 dark:text-warning border border-warning/25 px-2 py-0.5 rounded-full text-xs font-medium;
   }
 
   .status-badge-paid {
-    @apply bg-success/20 text-success border border-success/30 px-2 py-0.5 rounded-full text-xs font-medium;
+    @apply bg-success/15 text-emerald-600 dark:text-success border border-success/25 px-2 py-0.5 rounded-full text-xs font-medium;
   }
 
   .calendar-day {
-    @apply relative min-h-[100px] p-2 border border-border/30 rounded-lg transition-all duration-200 cursor-pointer;
+    @apply relative min-h-[100px] p-2 border border-border/50 rounded-lg transition-all duration-200 cursor-pointer bg-card;
   }
 
   .calendar-day:hover {

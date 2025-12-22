@@ -13,10 +13,12 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface NavItem {
   icon: React.ElementType;
@@ -39,6 +41,20 @@ export function Sidebar() {
   const { user, userRole, signOut } = useAuth();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+
+  // Check initial theme
+  useEffect(() => {
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    setIsDark(isDarkMode);
+  }, []);
+
+  const toggleTheme = () => {
+    const newIsDark = !isDark;
+    setIsDark(newIsDark);
+    document.documentElement.classList.toggle('dark', newIsDark);
+    localStorage.setItem('theme', newIsDark ? 'dark' : 'light');
+  };
 
   const filteredNavItems = navItems.filter(item => 
     userRole && item.roles.includes(userRole)
@@ -112,6 +128,23 @@ export function Sidebar() {
 
       {/* User Section */}
       <div className="p-4 border-t border-sidebar-border space-y-2">
+        {/* Theme Toggle */}
+        <Button
+          variant="ghost"
+          className={cn(
+            'w-full justify-start text-muted-foreground hover:text-foreground',
+            isCollapsed && 'justify-center px-0'
+          )}
+          onClick={toggleTheme}
+        >
+          {isDark ? (
+            <Sun className="w-5 h-5 flex-shrink-0" />
+          ) : (
+            <Moon className="w-5 h-5 flex-shrink-0" />
+          )}
+          {!isCollapsed && <span className="ml-3">{isDark ? 'Tema Chiaro' : 'Tema Scuro'}</span>}
+        </Button>
+
         {!isCollapsed && (
           <div className="px-2 py-2 text-sm text-muted-foreground truncate">
             {user?.email}

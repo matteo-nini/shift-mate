@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, Loader2, Mail, Lock, User, UserCircle } from 'lucide-react';
+import { Clock, Loader2, Mail, Lock, User, UserCircle, AlertCircle } from 'lucide-react';
 import { z } from 'zod';
+import { supabase } from '@/integrations/supabase/client';
 
 const loginSchema = z.object({
   email: z.string().email('Email non valida'),
@@ -26,6 +27,8 @@ export function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [allowRegistration, setAllowRegistration] = useState(true);
+  const [loadingSettings, setLoadingSettings] = useState(true);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -34,7 +37,30 @@ export function AuthPage() {
     fullName: '',
   });
 
-  if (loading) {
+  // Check if public registration is allowed
+  useEffect(() => {
+    const checkRegistrationSetting = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('system_settings')
+          .select('setting_value')
+          .eq('setting_key', 'allow_public_registration')
+          .single();
+
+        if (!error && data) {
+          setAllowRegistration(data.setting_value !== '0');
+        }
+      } catch (err) {
+        console.error('Error checking registration setting:', err);
+      } finally {
+        setLoadingSettings(false);
+      }
+    };
+
+    checkRegistrationSetting();
+  }, []);
+
+  if (loading || loadingSettings) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -240,20 +266,27 @@ export function AuthPage() {
             </form>
 
             <div className="mt-6 text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setErrors({});
-                }}
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
-              >
-                {isLogin ? (
-                  <>Non hai un account? <span className="text-primary font-medium">Registrati</span></>
-                ) : (
-                  <>Hai già un account? <span className="text-primary font-medium">Accedi</span></>
-                )}
-              </button>
+              {allowRegistration ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLogin(!isLogin);
+                    setErrors({});
+                  }}
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  {isLogin ? (
+                    <>Non hai un account? <span className="text-primary font-medium">Registrati</span></>
+                  ) : (
+                    <>Hai già un account? <span className="text-primary font-medium">Accedi</span></>
+                  )}
+                </button>
+              ) : (
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>La registrazione è disabilitata. Contatta l'amministratore.</span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

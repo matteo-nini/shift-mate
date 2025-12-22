@@ -7,6 +7,7 @@ export interface SystemSettings {
   default_hourly_rate: number;
   default_shift_rate: number;
   users_can_edit_rates: boolean;
+  allow_public_registration: boolean;
 }
 
 const defaultSettings: SystemSettings = {
@@ -14,6 +15,7 @@ const defaultSettings: SystemSettings = {
   default_hourly_rate: 10,
   default_shift_rate: 50,
   users_can_edit_rates: true,
+  allow_public_registration: true,
 };
 
 export function useSystemSettings() {
@@ -35,6 +37,7 @@ export function useSystemSettings() {
         default_hourly_rate: parseFloat(settingsMap.get('default_hourly_rate') || '10'),
         default_shift_rate: parseFloat(settingsMap.get('default_shift_rate') || '50'),
         users_can_edit_rates: settingsMap.get('users_can_edit_rates') === '1',
+        allow_public_registration: settingsMap.get('allow_public_registration') !== '0',
       });
     } catch (err) {
       console.error('Error fetching system settings:', err);
