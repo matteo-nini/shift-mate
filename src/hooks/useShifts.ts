@@ -201,6 +201,23 @@ export function useGlobalShifts() {
         details: `Turno aggiunto per ${profile?.username || 'utente'} il ${shift.date}`,
       });
 
+      // Send email notification to assigned user
+      try {
+        await supabase.functions.invoke('notify-shift', {
+          body: {
+            user_id: shift.assigned_to_user_id,
+            shift_date: shift.date,
+            start_time: shift.start_time,
+            end_time: shift.end_time,
+            notes: shift.notes,
+          },
+        });
+        console.log('Email notification sent successfully');
+      } catch (notifyError) {
+        console.error('Failed to send notification:', notifyError);
+        // Don't fail the main operation if notification fails
+      }
+
       const newShift = { ...data, profile };
       setShifts(prev => [newShift, ...prev]);
       toast.success('Turno aggiunto al calendario globale');

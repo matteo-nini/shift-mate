@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { useShifts } from '@/hooks/useShifts';
 import { useUserSettings, useSystemSettings } from '@/hooks/useUserSettings';
+import { useSyncShifts } from '@/hooks/useSyncShifts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, TrendingUp, Wallet, Zap, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,10 +12,13 @@ import { parseISO } from 'date-fns';
 
 export function Dashboard() {
   const { user } = useAuth();
-  const { shifts, loading: shiftsLoading } = useShifts();
+  const { shifts, loading: shiftsLoading, refetch } = useShifts();
   const { settings: userSettings, loading: settingsLoading } = useUserSettings();
   const { settings: systemSettings } = useSystemSettings();
   const [showEarnings, setShowEarnings] = useState(true);
+  
+  // Sync shifts on login
+  useSyncShifts();
 
   const loading = shiftsLoading || settingsLoading;
 
