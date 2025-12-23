@@ -52,8 +52,14 @@ export function Sidebar() {
   const toggleTheme = () => {
     const newIsDark = !isDark;
     setIsDark(newIsDark);
+    // Add transition class for smooth theme change
+    document.documentElement.classList.add('theme-transition');
     document.documentElement.classList.toggle('dark', newIsDark);
     localStorage.setItem('theme', newIsDark ? 'dark' : 'light');
+    // Remove transition class after animation completes
+    setTimeout(() => {
+      document.documentElement.classList.remove('theme-transition');
+    }, 400);
   };
 
   const filteredNavItems = navItems.filter(item => 

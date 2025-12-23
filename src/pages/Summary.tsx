@@ -4,6 +4,7 @@ import { format, startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval
 import { it } from 'date-fns/locale';
 import { useShifts } from '@/hooks/useShifts';
 import { useUserSettings, useSystemSettings } from '@/hooks/useUserSettings';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   calculateHours,
   formatHours,
@@ -12,6 +13,7 @@ import {
   calculateShiftType,
   calculateEarnings,
 } from '@/lib/shiftUtils';
+import { exportToPDF, exportToExcel } from '@/lib/exportUtils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -52,6 +54,8 @@ import {
   CheckCircle,
   AlertCircle,
   Filter,
+  FileText,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -63,6 +67,7 @@ interface ShiftFormData {
 }
 
 export function Summary() {
+  const { user } = useAuth();
   const { shifts, loading: shiftsLoading, updateShift, deleteShift } = useShifts();
   const { settings: userSettings, loading: userSettingsLoading } = useUserSettings();
   const { settings: systemSettings, loading: systemLoading } = useSystemSettings();
@@ -202,6 +207,54 @@ export function Summary() {
     await deleteShift(id);
   };
 
+  const handleExportPDF = () => {
+    const monthLabel = selectedMonth === 'all' 
+      ? 'Tutti i mesi' 
+      : format(new Date(selectedMonth + '-01'), 'MMMM yyyy', { locale: it });
+    
+    const exportData = filteredShifts.map(shift => ({
+      date: shift.date,
+      start_time: shift.start_time,
+      end_time: shift.end_time,
+      hours: calculateHours(shift.start_time, shift.end_time),
+      type: getShiftType(shift),
+      status: shift.status,
+      notes: shift.notes,
+    }));
+
+    exportToPDF({
+      shifts: exportData,
+      stats,
+      userName: user?.email?.split('@')[0] || 'Utente',
+      monthLabel,
+    });
+    toast.success('PDF esportato con successo');
+  };
+
+  const handleExportExcel = () => {
+    const monthLabel = selectedMonth === 'all' 
+      ? 'Tutti i mesi' 
+      : format(new Date(selectedMonth + '-01'), 'MMMM yyyy', { locale: it });
+    
+    const exportData = filteredShifts.map(shift => ({
+      date: shift.date,
+      start_time: shift.start_time,
+      end_time: shift.end_time,
+      hours: calculateHours(shift.start_time, shift.end_time),
+      type: getShiftType(shift),
+      status: shift.status,
+      notes: shift.notes,
+    }));
+
+    exportToExcel({
+      shifts: exportData,
+      stats,
+      userName: user?.email?.split('@')[0] || 'Utente',
+      monthLabel,
+    });
+    toast.success('Excel esportato con successo');
+  };
+
   const loading = shiftsLoading || userSettingsLoading || systemLoading;
 
   if (loading) {
@@ -225,7 +278,7 @@ export function Summary() {
           <p className="text-muted-foreground">Statistiche e dettagli dei tuoi turni</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Filter className="w-4 h-4 text-muted-foreground" />
           <Select value={selectedMonth} onValueChange={setSelectedMonth}>
             <SelectTrigger className="w-[200px]">
@@ -239,6 +292,27 @@ export function Summary() {
               ))}
             </SelectContent>
           </Select>
+          
+          <div className="flex gap-2 ml-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPDF}
+              className="gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportExcel}
+              className="gap-2"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              Excel
+            </Button>
+          </div>
         </div>
       </div>
 
