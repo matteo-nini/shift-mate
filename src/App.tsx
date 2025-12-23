@@ -10,6 +10,7 @@ import { Dashboard } from "@/pages/Dashboard";
 import { MyShifts } from "@/pages/MyShifts";
 import { Summary } from "@/pages/Summary";
 import { GlobalCalendar } from "@/pages/GlobalCalendar";
+import { LeaveRequests } from "@/pages/LeaveRequests";
 import { Logs } from "@/pages/Logs";
 import { AdminPanel } from "@/pages/AdminPanel";
 import { Settings } from "@/pages/Settings";
@@ -31,6 +32,7 @@ const App = () => (
               <Route path="/my-shifts" element={<MyShifts />} />
               <Route path="/summary" element={<Summary />} />
               <Route path="/global-calendar" element={<GlobalCalendar />} />
+              <Route path="/leave-requests" element={<LeaveRequests />} />
               <Route path="/logs" element={<Logs />} />
               <Route path="/users" element={<AdminPanel />} />
               <Route path="/settings" element={<Settings />} />

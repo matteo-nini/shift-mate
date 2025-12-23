@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Sun,
   Moon,
+  Palmtree,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -32,6 +33,7 @@ const navItems: NavItem[] = [
   { icon: Calendar, label: 'I Miei Turni', path: '/my-shifts', roles: ['user'] },
   { icon: ClipboardList, label: 'Riepilogo', path: '/summary', roles: ['user'] },
   { icon: CalendarDays, label: 'Calendario Globale', path: '/global-calendar', roles: ['admin', 'user'] },
+  { icon: Palmtree, label: 'Ferie & Permessi', path: '/leave-requests', roles: ['admin', 'user'] },
   { icon: FileText, label: 'Logs', path: '/logs', roles: ['admin'] },
   { icon: Users, label: 'Gestione Utenze', path: '/users', roles: ['admin'] },
   { icon: Settings, label: 'Impostazioni', path: '/settings', roles: ['admin', 'user'] },
@@ -43,10 +45,28 @@ export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isDark, setIsDark] = useState(false);
 
-  // Check initial theme
+  // Check initial theme - including system preference
   useEffect(() => {
-    const isDarkMode = document.documentElement.classList.contains('dark');
-    setIsDark(isDarkMode);
+    const savedTheme = localStorage.getItem('theme');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    // Priority: saved preference > system preference
+    const shouldBeDark = savedTheme ? savedTheme === 'dark' : systemPrefersDark;
+    setIsDark(shouldBeDark);
+    document.documentElement.classList.toggle('dark', shouldBeDark);
+
+    // Listen for system preference changes
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e: MediaQueryListEvent) => {
+      // Only auto-switch if no saved preference
+      if (!localStorage.getItem('theme')) {
+        setIsDark(e.matches);
+        document.documentElement.classList.toggle('dark', e.matches);
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
   const toggleTheme = () => {

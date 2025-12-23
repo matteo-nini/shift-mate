@@ -83,6 +83,66 @@ export type Database = {
         }
         Relationships: []
       }
+      leave_requests: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          reason: string | null
+          request_type: Database["public"]["Enums"]["leave_request_type"]
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by_user_id: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["leave_request_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          reason?: string | null
+          request_type?: Database["public"]["Enums"]["leave_request_type"]
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["leave_request_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          reason?: string | null
+          request_type?: Database["public"]["Enums"]["leave_request_type"]
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["leave_request_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_requests_reviewed_by_user_id_fkey"
+            columns: ["reviewed_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -275,6 +335,8 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
+      leave_request_status: "pending" | "approved" | "rejected"
+      leave_request_type: "ferie" | "permesso" | "malattia" | "altro"
       payment_method: "hourly" | "per_shift"
       shift_status: "pending" | "paid"
       user_role: "admin" | "user"
@@ -405,6 +467,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      leave_request_status: ["pending", "approved", "rejected"],
+      leave_request_type: ["ferie", "permesso", "malattia", "altro"],
       payment_method: ["hourly", "per_shift"],
       shift_status: ["pending", "paid"],
       user_role: ["admin", "user"],
