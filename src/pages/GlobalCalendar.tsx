@@ -48,6 +48,8 @@ import {
   Edit,
   Trash2,
   User,
+  Filter,
+  X,
 } from 'lucide-react';
 
 interface ShiftFormData {
@@ -77,6 +79,13 @@ export function GlobalCalendar() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
   const [formData, setFormData] = useState<ShiftFormData>(initialFormData);
+  const [filterUserId, setFilterUserId] = useState<string>('all');
+
+  // Filter shifts by selected user
+  const filteredShifts = useMemo(() => {
+    if (filterUserId === 'all') return shifts;
+    return shifts.filter(s => s.assigned_to_user_id === filterUserId);
+  }, [shifts, filterUserId]);
 
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(currentMonth);
@@ -88,13 +97,13 @@ export function GlobalCalendar() {
 
   const shiftsMap = useMemo(() => {
     const map = new Map<string, typeof shifts>();
-    shifts.forEach(shift => {
+    filteredShifts.forEach(shift => {
       const key = shift.date;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(shift);
     });
     return map;
-  }, [shifts]);
+  }, [filteredShifts]);
 
   const dayShifts = useMemo(() => {
     if (!selectedDay) return [];
@@ -202,15 +211,43 @@ export function GlobalCalendar() {
         )}
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap gap-4 text-sm">
+      {/* Filter & Legend */}
+      <div className="flex flex-wrap items-center gap-4">
+        {/* User Filter */}
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-primary" />
-          <span>Turni miei</span>
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <Select value={filterUserId} onValueChange={setFilterUserId}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filtra per utente" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tutti gli utenti</SelectItem>
+              {activeUsers.map(u => (
+                <SelectItem key={u.id} value={u.id}>
+                  {u.full_name || u.username}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {filterUserId !== 'all' && (
+            <Button variant="ghost" size="icon" onClick={() => setFilterUserId('all')}>
+              <X className="w-4 h-4" />
+            </Button>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-muted-foreground" />
-          <span>Turni altri</span>
+
+        <div className="flex-1" />
+
+        {/* Legend */}
+        <div className="flex flex-wrap gap-4 text-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-primary" />
+            <span>Turni miei</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-muted-foreground" />
+            <span>Turni altri</span>
+          </div>
         </div>
       </div>
 

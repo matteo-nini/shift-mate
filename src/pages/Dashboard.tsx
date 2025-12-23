@@ -4,11 +4,12 @@ import { useShifts } from '@/hooks/useShifts';
 import { useUserSettings, useSystemSettings } from '@/hooks/useUserSettings';
 import { useSyncShifts } from '@/hooks/useSyncShifts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, TrendingUp, Wallet, Zap, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Clock, TrendingUp, Wallet, Zap, Eye, EyeOff, Loader2, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useMemo } from 'react';
 import { calculateHours, formatHours, formatCurrency, getShiftsForMonth, getShiftsForWeek } from '@/lib/shiftUtils';
 import { parseISO } from 'date-fns';
+import { MonthlyCharts } from '@/components/dashboard/MonthlyCharts';
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -16,6 +17,7 @@ export function Dashboard() {
   const { settings: userSettings, loading: settingsLoading } = useUserSettings();
   const { settings: systemSettings } = useSystemSettings();
   const [showEarnings, setShowEarnings] = useState(true);
+  const [showCharts, setShowCharts] = useState(true);
   
   // Sync shifts on login
   useSyncShifts();
@@ -46,6 +48,8 @@ export function Dashboard() {
       weeklyHours,
       monthlyHours,
       weeklyContract,
+      hourlyRate,
+      extraRate,
       contractEarnings,
       extraEarnings,
       progress: Math.min(100, (weeklyHours / weeklyContract) * 100),
@@ -70,15 +74,26 @@ export function Dashboard() {
             Bentornato! Ecco il riepilogo della tua attività.
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowEarnings(!showEarnings)}
-          className="gap-2"
-        >
-          {showEarnings ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          {showEarnings ? 'Nascondi' : 'Mostra'} guadagni
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCharts(!showCharts)}
+            className="gap-2"
+          >
+            <BarChart3 className="w-4 h-4" />
+            {showCharts ? 'Nascondi' : 'Mostra'} grafici
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowEarnings(!showEarnings)}
+            className="gap-2"
+          >
+            {showEarnings ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            {showEarnings ? 'Nascondi' : 'Mostra'} guadagni
+          </Button>
+        </div>
       </div>
 
       {/* Stats Grid */}
@@ -186,6 +201,22 @@ export function Dashboard() {
           </Card>
         </motion.div>
       </div>
+
+      {/* Charts Section */}
+      {showCharts && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+        >
+          <MonthlyCharts
+            shifts={shifts}
+            weeklyContract={stats.weeklyContract}
+            hourlyRate={stats.hourlyRate}
+            extraRate={stats.extraRate}
+          />
+        </motion.div>
+      )}
 
       {/* Recent Shifts */}
       <Card>
