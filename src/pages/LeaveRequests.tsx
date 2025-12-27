@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { format, differenceInDays } from 'date-fns';
+import { format, differenceInDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isWithinInterval, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLeaveRequests, LeaveRequestType, LeaveRequestStatus } from '@/hooks/useLeaveRequests';
+import { useLeaveRequests, LeaveRequestType, LeaveRequestStatus, LeaveRequest } from '@/hooks/useLeaveRequests';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -34,13 +34,15 @@ import {
 import { cn } from '@/lib/utils';
 import {
   Plus,
-  Calendar,
+  Calendar as CalendarIcon,
   Clock,
   CheckCircle2,
   XCircle,
   AlertCircle,
   Trash2,
   User,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { getLocalISODate } from '@/lib/shiftUtils';
 
@@ -65,6 +67,7 @@ export function LeaveRequests() {
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<string | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [formData, setFormData] = useState({
     request_type: 'ferie' as LeaveRequestType,
     start_date: getLocalISODate(new Date()),
@@ -75,6 +78,29 @@ export function LeaveRequests() {
   const myRequests = requests.filter(r => r.user_id === user?.id);
   const pendingRequests = requests.filter(r => r.status === 'pending');
   const allRequests = requests;
+  const approvedRequests = requests.filter(r => r.status === 'approved');
+
+  // Calendar data
+  const calendarDays = useMemo(() => {
+    const start = startOfMonth(calendarMonth);
+    const end = endOfMonth(calendarMonth);
+    return eachDayOfInterval({ start, end });
+  }, [calendarMonth]);
+
+  const getRequestsForDay = (day: Date): LeaveRequest[] => {
+    return approvedRequests.filter(request => {
+      const startDate = parseISO(request.start_date);
+      const endDate = parseISO(request.end_date);
+      return isWithinInterval(day, { start: startDate, end: endDate });
+    });
+  };
+
+  const REQUEST_TYPE_COLORS: Record<LeaveRequestType, string> = {
+    ferie: 'bg-blue-500',
+    permesso: 'bg-amber-500',
+    malattia: 'bg-red-500',
+    altro: 'bg-purple-500',
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,7 +169,7 @@ export function LeaveRequests() {
 
             <div className="flex items-center gap-4 text-sm">
               <div className="flex items-center gap-1 text-muted-foreground">
-                <Calendar className="w-4 h-4" />
+                <CalendarIcon className="w-4 h-4" />
                 <span>
                   {format(new Date(request.start_date), 'd MMM', { locale: it })} - {format(new Date(request.end_date), 'd MMM yyyy', { locale: it })}
                 </span>
@@ -227,6 +253,117 @@ export function LeaveRequests() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Approved Leave Calendar */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <CalendarIcon className="w-5 h-5" />
+              Calendario Ferie Approvate
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span className="min-w-[140px] text-center font-medium">
+                {format(calendarMonth, 'MMMM yyyy', { locale: it })}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Legend */}
+          <div className="flex flex-wrap gap-4 mb-4 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-blue-500" />
+              <span>Ferie</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-amber-500" />
+              <span>Permesso</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-red-500" />
+              <span>Malattia</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-purple-500" />
+              <span>Altro</span>
+            </div>
+          </div>
+
+          {/* Calendar Grid */}
+          <div className="grid grid-cols-7 gap-1">
+            {/* Day headers */}
+            {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map(day => (
+              <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
+                {day}
+              </div>
+            ))}
+            
+            {/* Empty cells for days before month starts */}
+            {Array.from({ length: (calendarDays[0]?.getDay() || 7) - 1 }).map((_, i) => (
+              <div key={`empty-start-${i}`} className="aspect-square" />
+            ))}
+            
+            {/* Calendar days */}
+            {calendarDays.map(day => {
+              const dayRequests = getRequestsForDay(day);
+              const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+              
+              return (
+                <motion.div
+                  key={day.toISOString()}
+                  whileHover={{ scale: 1.05 }}
+                  className={cn(
+                    'aspect-square p-1 rounded-lg border transition-colors',
+                    isToday ? 'border-primary bg-primary/5' : 'border-transparent hover:border-border',
+                    dayRequests.length > 0 && 'bg-muted/50'
+                  )}
+                >
+                  <div className={cn(
+                    'text-sm font-medium mb-1',
+                    isToday && 'text-primary'
+                  )}>
+                    {format(day, 'd')}
+                  </div>
+                  <div className="space-y-0.5 overflow-hidden">
+                    {dayRequests.slice(0, 2).map(request => (
+                      <div
+                        key={request.id}
+                        className={cn(
+                          'text-[10px] px-1 py-0.5 rounded text-white truncate',
+                          REQUEST_TYPE_COLORS[request.request_type]
+                        )}
+                        title={`${request.profile?.full_name || request.profile?.username || 'Utente'} - ${REQUEST_TYPE_LABELS[request.request_type]}`}
+                      >
+                        {request.profile?.full_name?.split(' ')[0] || request.profile?.username || 'U'}
+                      </div>
+                    ))}
+                    {dayRequests.length > 2 && (
+                      <div className="text-[10px] text-muted-foreground">
+                        +{dayRequests.length - 2}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Tabs */}
       <Tabs defaultValue={isAdmin ? 'pending' : 'my'} className="space-y-4">
