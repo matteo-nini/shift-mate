@@ -46,6 +46,7 @@ export type Database = {
           date: string
           end_time: string
           id: string
+          is_extra: boolean
           notes: string | null
           payment_amount: number | null
           payment_method: Database["public"]["Enums"]["payment_method"] | null
@@ -60,6 +61,7 @@ export type Database = {
           date: string
           end_time: string
           id?: string
+          is_extra?: boolean
           notes?: string | null
           payment_amount?: number | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
@@ -74,6 +76,7 @@ export type Database = {
           date?: string
           end_time?: string
           id?: string
+          is_extra?: boolean
           notes?: string | null
           payment_amount?: number | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
@@ -179,6 +182,7 @@ export type Database = {
           date: string
           end_time: string
           id: string
+          is_extra: boolean
           notes: string | null
           start_time: string
           status: Database["public"]["Enums"]["shift_status"] | null
@@ -190,6 +194,7 @@ export type Database = {
           date: string
           end_time: string
           id?: string
+          is_extra?: boolean
           notes?: string | null
           start_time: string
           status?: Database["public"]["Enums"]["shift_status"] | null
@@ -201,6 +206,7 @@ export type Database = {
           date?: string
           end_time?: string
           id?: string
+          is_extra?: boolean
           notes?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["shift_status"] | null

@@ -16,7 +16,7 @@ import {
 } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useShifts } from '@/hooks/useShifts';
-import { useUserSettings } from '@/hooks/useUserSettings';
+import { useUserSettings, useSystemSettings } from '@/hooks/useUserSettings';
 import { calculateHours, formatHours, getLocalISODate, calculateShiftType } from '@/lib/shiftUtils';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -26,6 +26,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import {
   ChevronLeft,
@@ -50,6 +51,7 @@ interface ShiftFormData {
   start_time: string;
   end_time: string;
   notes: string;
+  is_extra: boolean;
 }
 
 const initialFormData: ShiftFormData = {
@@ -57,11 +59,14 @@ const initialFormData: ShiftFormData = {
   start_time: '09:00',
   end_time: '17:00',
   notes: '',
+  is_extra: false,
 };
 
 export function MyShifts() {
   const { shifts, loading, addShift, updateShift, deleteShift } = useShifts();
   const { settings } = useUserSettings();
+  const { settings: systemSettings } = useSystemSettings();
+  const isPerShiftMode = systemSettings.payment_method === 'per_shift';
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -110,7 +115,12 @@ export function MyShifts() {
     return map;
   }, [shifts]);
 
-  const getShiftType = (shift: { date: string; start_time: string; end_time: string }) => {
+  const getShiftType = (shift: { date: string; start_time: string; end_time: string; is_extra?: boolean }) => {
+    // Per-shift mode: use is_extra flag
+    if (isPerShiftMode) {
+      return shift.is_extra ? 'extra' : 'contract';
+    }
+    // Hourly mode: calculate based on weekly hours
     return calculateShiftType(
       shift,
       shifts.map(s => ({ date: s.date, start_time: s.start_time, end_time: s.end_time })),
@@ -139,6 +149,7 @@ export function MyShifts() {
       start_time: activeShift.startDisplay,
       end_time: format(now, 'HH:mm'),
       notes: '',
+      is_extra: false,
     });
     setEditingShiftId(null);
     setIsFormOpen(true);
@@ -168,6 +179,7 @@ export function MyShifts() {
       start_time: shift.start_time.slice(0, 5),
       end_time: shift.end_time.slice(0, 5),
       notes: shift.notes || '',
+      is_extra: shift.is_extra || false,
     });
     setEditingShiftId(shift.id);
     setIsFormOpen(true);
@@ -187,6 +199,7 @@ export function MyShifts() {
         start_time: formData.start_time,
         end_time: formData.end_time,
         notes: formData.notes || null,
+        is_extra: formData.is_extra,
       });
     } else {
       await addShift({
@@ -195,6 +208,7 @@ export function MyShifts() {
         end_time: formData.end_time,
         notes: formData.notes || null,
         status: 'pending',
+        is_extra: formData.is_extra,
       });
     }
 
@@ -451,6 +465,22 @@ export function MyShifts() {
             {formData.start_time && formData.end_time && (
               <div className="text-sm text-muted-foreground">
                 Durata: {formatHours(calculateHours(formData.start_time, formData.end_time))}
+              </div>
+            )}
+
+            {isPerShiftMode && (
+              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border">
+                <div className="space-y-0.5">
+                  <Label htmlFor="is_extra">Turno Extra</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Indica se questo è un turno extra (fuori contratto)
+                  </p>
+                </div>
+                <Switch
+                  id="is_extra"
+                  checked={formData.is_extra}
+                  onCheckedChange={checked => setFormData({ ...formData, is_extra: checked })}
+                />
               </div>
             )}
 
