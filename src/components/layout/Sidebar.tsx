@@ -29,9 +29,9 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['user'] },
-  { icon: Calendar, label: 'I Miei Turni', path: '/my-shifts', roles: ['user'] },
-  { icon: ClipboardList, label: 'Riepilogo', path: '/summary', roles: ['user'] },
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['admin', 'user'] },
+  { icon: Calendar, label: 'I Miei Turni', path: '/my-shifts', roles: ['admin', 'user'] },
+  { icon: ClipboardList, label: 'Riepilogo', path: '/summary', roles: ['admin', 'user'] },
   { icon: CalendarDays, label: 'Calendario Globale', path: '/global-calendar', roles: ['admin', 'user'] },
   { icon: Palmtree, label: 'Ferie & Permessi', path: '/leave-requests', roles: ['admin', 'user'] },
   { icon: FileText, label: 'Logs', path: '/logs', roles: ['admin'] },
