@@ -103,9 +103,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, username: string, fullName?: string) => {
     try {
+      console.log('Tentativo signup con:', email);
       const redirectUrl = `${window.location.origin}/`;
 
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -116,6 +117,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           },
         },
       });
+
+      console.log('Risposta Supabase:', { data, error });
 
       if (error) {
         if (error.message.includes('already registered')) {
@@ -131,6 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       const error = err as Error;
       toast.error(error.message);
+      console.log('Errore durante la registrazione:', error);
       return { error };
     }
   };
