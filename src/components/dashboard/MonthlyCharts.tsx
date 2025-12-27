@@ -12,13 +12,16 @@ interface Shift {
   start_time: string;
   end_time: string;
   status: 'pending' | 'paid' | null;
+  is_extra?: boolean;
 }
 
 interface MonthlyChartsProps {
   shifts: Shift[];
   weeklyContract: number;
   hourlyRate: number;
+  shiftRate: number;
   extraRate: number;
+  isPerShiftMode: boolean;
 }
 
 const chartConfig = {
@@ -30,7 +33,7 @@ const chartConfig = {
   pending: { label: 'In attesa', color: 'hsl(var(--warning))' },
 };
 
-export function MonthlyCharts({ shifts, weeklyContract, hourlyRate, extraRate }: MonthlyChartsProps) {
+export function MonthlyCharts({ shifts, weeklyContract, hourlyRate, shiftRate, extraRate, isPerShiftMode }: MonthlyChartsProps) {
   const now = new Date();
 
   // Generate last 6 months data
@@ -50,12 +53,28 @@ export function MonthlyCharts({ shifts, weeklyContract, hourlyRate, extraRate }:
       });
 
       const totalHours = monthShifts.reduce((sum, s) => sum + calculateHours(s.start_time, s.end_time), 0);
-      const monthlyContractHours = weeklyContract * 4;
-      const contractHours = Math.min(totalHours, monthlyContractHours);
-      const extraHours = Math.max(0, totalHours - contractHours);
+      
+      let contractHours: number;
+      let extraHours: number;
+      let contractEarnings: number;
+      let extraEarnings: number;
 
-      const contractEarnings = contractHours * hourlyRate;
-      const extraEarnings = extraHours * extraRate;
+      if (isPerShiftMode) {
+        // Per-shift mode: count by is_extra flag
+        const contractShifts = monthShifts.filter(s => !s.is_extra).length;
+        const extraShiftsCount = monthShifts.filter(s => s.is_extra).length;
+        contractHours = monthShifts.filter(s => !s.is_extra).reduce((sum, s) => sum + calculateHours(s.start_time, s.end_time), 0);
+        extraHours = monthShifts.filter(s => s.is_extra).reduce((sum, s) => sum + calculateHours(s.start_time, s.end_time), 0);
+        contractEarnings = contractShifts * shiftRate;
+        extraEarnings = extraShiftsCount * shiftRate;
+      } else {
+        // Hourly mode
+        const monthlyContractHours = weeklyContract * 4;
+        contractHours = Math.min(totalHours, monthlyContractHours);
+        extraHours = Math.max(0, totalHours - contractHours);
+        contractEarnings = contractHours * hourlyRate;
+        extraEarnings = extraHours * extraRate;
+      }
 
       return {
         month: format(month, 'MMM', { locale: it }),
@@ -69,7 +88,7 @@ export function MonthlyCharts({ shifts, weeklyContract, hourlyRate, extraRate }:
         shifts: monthShifts.length,
       };
     });
-  }, [shifts, weeklyContract, hourlyRate, extraRate]);
+  }, [shifts, weeklyContract, hourlyRate, shiftRate, extraRate, isPerShiftMode]);
 
   // Current month payment status
   const paymentData = useMemo(() => {

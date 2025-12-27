@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useUsers } from '@/hooks/useUsers';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
@@ -115,11 +115,11 @@ export function AdminPanel() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Update pending settings when loaded
-  useState(() => {
+  useEffect(() => {
     if (!settingsLoading) {
       setPendingSettings(settings);
     }
-  });
+  }, [settings, settingsLoading]);
 
   const handleEditUser = (user: typeof users[0]) => {
     setEditingUser({

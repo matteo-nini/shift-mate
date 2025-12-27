@@ -120,6 +120,7 @@ export function Summary() {
     let unpaidExtra = 0;
 
     const paymentMethod = systemSettings.payment_method || 'hourly';
+    const isPerShiftMode = paymentMethod === 'per_shift';
     const hourlyRate = userSettings?.use_custom_rates && userSettings?.custom_hourly_rate
       ? userSettings.custom_hourly_rate
       : parseFloat(systemSettings.default_hourly_rate) || 10;
@@ -132,21 +133,29 @@ export function Summary() {
       const hours = calculateHours(shift.start_time, shift.end_time);
       totalHours += hours;
 
-      const type = calculateShiftType(
-        { date: shift.date, start_time: shift.start_time, end_time: shift.end_time },
-        shifts.map(s => ({ date: s.date, start_time: s.start_time, end_time: s.end_time })),
-        userSettings?.weekly_hours || 18,
-        userSettings?.contract_start_date || null
-      );
+      // Per-shift mode: use is_extra flag directly
+      // Hourly mode: use calculateShiftType based on weekly hours
+      let isExtra: boolean;
+      if (isPerShiftMode) {
+        isExtra = (shift as any).is_extra || false;
+      } else {
+        const type = calculateShiftType(
+          { date: shift.date, start_time: shift.start_time, end_time: shift.end_time },
+          shifts.map(s => ({ date: s.date, start_time: s.start_time, end_time: s.end_time })),
+          userSettings?.weekly_hours || 18,
+          userSettings?.contract_start_date || null
+        );
+        isExtra = type === 'extra';
+      }
 
-      if (type === 'contract') {
+      if (!isExtra) {
         contractHours += hours;
-        const earnings = paymentMethod === 'hourly' ? hours * hourlyRate : shiftRate;
+        const earnings = isPerShiftMode ? shiftRate : hours * hourlyRate;
         if (shift.status === 'paid') paidContract += earnings;
         else unpaidContract += earnings;
       } else {
         extraHours += hours;
-        const earnings = hours * extraRate;
+        const earnings = isPerShiftMode ? shiftRate : hours * extraRate;
         if (shift.status === 'paid') paidExtra += earnings;
         else unpaidExtra += earnings;
       }
@@ -164,10 +173,16 @@ export function Summary() {
       unpaidContract,
       paidExtra,
       unpaidExtra,
+      isPerShiftMode,
     };
   }, [filteredShifts, shifts, userSettings, systemSettings]);
 
-  const getShiftType = (shift: { date: string; start_time: string; end_time: string }) => {
+  const getShiftType = (shift: { date: string; start_time: string; end_time: string } & { is_extra?: boolean }) => {
+    // Per-shift mode: use is_extra flag
+    if (systemSettings.payment_method === 'per_shift') {
+      return shift.is_extra ? 'extra' : 'contract';
+    }
+    // Hourly mode: calculate based on weekly hours
     return calculateShiftType(
       shift,
       shifts.map(s => ({ date: s.date, start_time: s.start_time, end_time: s.end_time })),

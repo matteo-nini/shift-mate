@@ -4,10 +4,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Database } from '@/integrations/supabase/types';
 
-type Shift = Database['public']['Tables']['shifts']['Row'];
-type GlobalShift = Database['public']['Tables']['global_shifts']['Row'];
-type ShiftInsert = Database['public']['Tables']['shifts']['Insert'];
-type ShiftUpdate = Database['public']['Tables']['shifts']['Update'];
+export type Shift = Database['public']['Tables']['shifts']['Row'] & { is_extra?: boolean };
+export type GlobalShift = Database['public']['Tables']['global_shifts']['Row'] & { is_extra?: boolean };
+type ShiftInsert = Database['public']['Tables']['shifts']['Insert'] & { is_extra?: boolean };
+type ShiftUpdate = Database['public']['Tables']['shifts']['Update'] & { is_extra?: boolean };
 
 export function useShifts() {
   const { user } = useAuth();

@@ -33,26 +33,50 @@ export function Dashboard() {
     const monthlyHours = monthShifts.reduce((sum, s) => sum + calculateHours(s.start_time, s.end_time), 0);
 
     const weeklyContract = userSettings?.weekly_hours ? Number(userSettings.weekly_hours) : 18;
+    
+    const isPerShiftMode = systemSettings.payment_method === 'per_shift';
+    
+    // Per-shift mode: count shifts by is_extra flag
+    const monthContractShifts = monthShifts.filter(s => !(s as any).is_extra).length;
+    const monthExtraShifts = monthShifts.filter(s => (s as any).is_extra).length;
+    
+    // Hourly mode: calculate based on hours
     const hourlyRate = userSettings?.use_custom_rates && userSettings?.custom_hourly_rate
       ? Number(userSettings.custom_hourly_rate)
       : Number(systemSettings.default_hourly_rate || 10);
+    const shiftRate = userSettings?.use_custom_rates && userSettings?.custom_shift_rate
+      ? Number(userSettings.custom_shift_rate)
+      : Number(systemSettings.default_shift_rate || 50);
     const extraRate = userSettings?.extra_rate ? Number(userSettings.extra_rate) : 10;
 
-    const contractHours = Math.min(monthlyHours, weeklyContract * 4);
-    const extraHours = Math.max(0, monthlyHours - contractHours);
-
-    const contractEarnings = contractHours * hourlyRate;
-    const extraEarnings = extraHours * extraRate;
+    let contractEarnings: number;
+    let extraEarnings: number;
+    
+    if (isPerShiftMode) {
+      // Per-shift mode: earnings based on shift count
+      contractEarnings = monthContractShifts * shiftRate;
+      extraEarnings = monthExtraShifts * shiftRate;
+    } else {
+      // Hourly mode: earnings based on hours
+      const contractHours = Math.min(monthlyHours, weeklyContract * 4);
+      const extraHours = Math.max(0, monthlyHours - contractHours);
+      contractEarnings = contractHours * hourlyRate;
+      extraEarnings = extraHours * extraRate;
+    }
 
     return {
       weeklyHours,
       monthlyHours,
       weeklyContract,
       hourlyRate,
+      shiftRate,
       extraRate,
       contractEarnings,
       extraEarnings,
       progress: Math.min(100, (weeklyHours / weeklyContract) * 100),
+      isPerShiftMode,
+      monthContractShifts,
+      monthExtraShifts,
     };
   }, [shifts, userSettings, systemSettings]);
 
@@ -213,7 +237,9 @@ export function Dashboard() {
             shifts={shifts}
             weeklyContract={stats.weeklyContract}
             hourlyRate={stats.hourlyRate}
+            shiftRate={stats.shiftRate}
             extraRate={stats.extraRate}
+            isPerShiftMode={stats.isPerShiftMode}
           />
         </motion.div>
       )}
