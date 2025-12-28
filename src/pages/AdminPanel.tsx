@@ -581,27 +581,102 @@ export function AdminPanel() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="company_logo">URL Logo Aziendale</Label>
-                  <Input
-                    id="company_logo"
-                    value={pendingSettings.company_logo_url || ''}
-                    onChange={e =>
-                      setPendingSettings({ ...pendingSettings, company_logo_url: e.target.value })
-                    }
-                    placeholder="https://esempio.it/logo.png"
-                  />
-                  {pendingSettings.company_logo_url && (
-                    <div className="mt-2 p-4 bg-muted/50 rounded-lg flex items-center justify-center">
-                      <img
-                        src={pendingSettings.company_logo_url}
-                        alt="Logo anteprima"
-                        className="max-h-16 max-w-full object-contain"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
+                  <Label>Logo Aziendale</Label>
+                  <div className="space-y-3">
+                    {/* File Upload */}
+                    <div className="flex gap-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          
+                          if (file.size > 2 * 1024 * 1024) {
+                            toast.error('Il file deve essere inferiore a 2MB');
+                            return;
+                          }
+
+                          try {
+                            const fileExt = file.name.split('.').pop();
+                            const fileName = `logo.${fileExt}`;
+                            
+                            // Delete old logo if exists
+                            await supabase.storage
+                              .from('company-assets')
+                              .remove([fileName]);
+                            
+                            // Upload new logo
+                            const { error: uploadError } = await supabase.storage
+                              .from('company-assets')
+                              .upload(fileName, file, { upsert: true });
+                            
+                            if (uploadError) throw uploadError;
+                            
+                            // Get public URL
+                            const { data: { publicUrl } } = supabase.storage
+                              .from('company-assets')
+                              .getPublicUrl(fileName);
+                            
+                            setPendingSettings({ ...pendingSettings, company_logo_url: publicUrl });
+                            toast.success('Logo caricato con successo');
+                          } catch (err) {
+                            console.error('Error uploading logo:', err);
+                            toast.error('Errore nel caricamento del logo');
+                          }
+                          
+                          e.target.value = '';
                         }}
+                        className="hidden"
+                        id="logo-upload"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => document.getElementById('logo-upload')?.click()}
+                        className="flex-1"
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Carica Logo
+                      </Button>
+                      {pendingSettings.company_logo_url && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setPendingSettings({ ...pendingSettings, company_logo_url: '' })}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {/* URL Input as fallback */}
+                    <div className="relative">
+                      <Input
+                        value={pendingSettings.company_logo_url || ''}
+                        onChange={e =>
+                          setPendingSettings({ ...pendingSettings, company_logo_url: e.target.value })
+                        }
+                        placeholder="Oppure inserisci URL: https://esempio.it/logo.png"
+                        className="text-sm"
                       />
                     </div>
-                  )}
+                    
+                    {/* Preview */}
+                    {pendingSettings.company_logo_url && (
+                      <div className="p-4 bg-muted/50 rounded-lg flex items-center justify-center">
+                        <img
+                          src={pendingSettings.company_logo_url}
+                          alt="Logo anteprima"
+                          className="max-h-20 max-w-full object-contain"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -629,7 +704,7 @@ export function AdminPanel() {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Lascia vuoto per usare il colore predefinito
+                    Lascia vuoto per usare il colore predefinito. Il colore verrà applicato dopo il salvataggio e ricaricamento della pagina.
                   </p>
                 </div>
               </CardContent>

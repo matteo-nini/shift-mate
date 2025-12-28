@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,8 +16,16 @@ import { Logs } from "@/pages/Logs";
 import { AdminPanel } from "@/pages/AdminPanel";
 import { Settings } from "@/pages/Settings";
 import NotFound from "./pages/NotFound";
+import { useBrandSettings } from "@/hooks/useBrandSettings";
 
 const queryClient = new QueryClient();
+
+// Component that applies brand settings
+function BrandSettingsProvider({ children }: { children: React.ReactNode }) {
+  // This hook fetches brand settings and applies CSS variables
+  useBrandSettings();
+  return <>{children}</>;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -25,20 +34,22 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/auth" element={<AuthPage />} />
-            <Route element={<MainLayout />}>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/my-shifts" element={<MyShifts />} />
-              <Route path="/summary" element={<Summary />} />
-              <Route path="/global-calendar" element={<GlobalCalendar />} />
-              <Route path="/leave-requests" element={<LeaveRequests />} />
-              <Route path="/logs" element={<Logs />} />
-              <Route path="/users" element={<AdminPanel />} />
-              <Route path="/settings" element={<Settings />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <BrandSettingsProvider>
+            <Routes>
+              <Route path="/auth" element={<AuthPage />} />
+              <Route element={<MainLayout />}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/my-shifts" element={<MyShifts />} />
+                <Route path="/summary" element={<Summary />} />
+                <Route path="/global-calendar" element={<GlobalCalendar />} />
+                <Route path="/leave-requests" element={<LeaveRequests />} />
+                <Route path="/logs" element={<Logs />} />
+                <Route path="/users" element={<AdminPanel />} />
+                <Route path="/settings" element={<Settings />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrandSettingsProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
