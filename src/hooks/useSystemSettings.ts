@@ -8,6 +8,10 @@ export interface SystemSettings {
   default_shift_rate: number;
   users_can_edit_rates: boolean;
   allow_public_registration: boolean;
+  // Brand settings
+  company_name: string;
+  company_logo_url: string;
+  primary_color: string;
 }
 
 const defaultSettings: SystemSettings = {
@@ -16,6 +20,9 @@ const defaultSettings: SystemSettings = {
   default_shift_rate: 50,
   users_can_edit_rates: true,
   allow_public_registration: true,
+  company_name: '',
+  company_logo_url: '',
+  primary_color: '',
 };
 
 export function useSystemSettings() {
@@ -38,6 +45,9 @@ export function useSystemSettings() {
         default_shift_rate: parseFloat(settingsMap.get('default_shift_rate') || '50'),
         users_can_edit_rates: settingsMap.get('users_can_edit_rates') === '1',
         allow_public_registration: settingsMap.get('allow_public_registration') !== '0',
+        company_name: settingsMap.get('company_name') || '',
+        company_logo_url: settingsMap.get('company_logo_url') || '',
+        primary_color: settingsMap.get('primary_color') || '',
       });
     } catch (err) {
       console.error('Error fetching system settings:', err);

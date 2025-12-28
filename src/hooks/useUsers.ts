@@ -61,6 +61,21 @@ export function useUsers() {
     fetchUsers();
   }, [fetchUsers]);
 
+  // Helper to log user actions
+  const logUserAction = async (userId: string, action: string, details: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase.from('user_audit_log').insert({
+        user_id: userId,
+        action,
+        details,
+        performed_by_user_id: user?.id || null,
+      });
+    } catch (err) {
+      console.error('Error logging user action:', err);
+    }
+  };
+
   const updateUser = async (
     userId: string,
     updates: {
@@ -70,20 +85,35 @@ export function useUsers() {
     }
   ) => {
     try {
+      const user = users.find(u => u.id === userId);
+      const changes: string[] = [];
+
       if (updates.profile) {
         const { error } = await supabase
           .from('profiles')
           .update(updates.profile)
           .eq('id', userId);
         if (error) throw error;
+
+        // Track profile changes
+        if (updates.profile.full_name !== undefined && updates.profile.full_name !== user?.full_name) {
+          changes.push(`Nome: "${user?.full_name || '-'}" → "${updates.profile.full_name || '-'}"`);
+        }
+        if (updates.profile.email !== undefined && updates.profile.email !== user?.email) {
+          changes.push(`Email: "${user?.email || '-'}" → "${updates.profile.email || '-'}"`);
+        }
+        if (updates.profile.is_active !== undefined && updates.profile.is_active !== user?.is_active) {
+          changes.push(`Stato: ${user?.is_active ? 'Attivo' : 'Disabilitato'} → ${updates.profile.is_active ? 'Attivo' : 'Disabilitato'}`);
+        }
       }
 
-      if (updates.role) {
+      if (updates.role && updates.role !== user?.role) {
         const { error } = await supabase
           .from('user_roles')
           .update({ role: updates.role })
           .eq('user_id', userId);
         if (error) throw error;
+        changes.push(`Ruolo: ${user?.role || 'user'} → ${updates.role}`);
       }
 
       if (updates.settings) {
@@ -92,6 +122,23 @@ export function useUsers() {
           .update(updates.settings)
           .eq('user_id', userId);
         if (error) throw error;
+
+        // Track settings changes
+        if (updates.settings.weekly_hours !== undefined && updates.settings.weekly_hours !== user?.settings?.weekly_hours) {
+          changes.push(`Ore settimanali: ${user?.settings?.weekly_hours || 18} → ${updates.settings.weekly_hours}`);
+        }
+        if (updates.settings.use_custom_rates !== undefined && updates.settings.use_custom_rates !== user?.settings?.use_custom_rates) {
+          changes.push(`Tariffe personalizzate: ${user?.settings?.use_custom_rates ? 'Sì' : 'No'} → ${updates.settings.use_custom_rates ? 'Sì' : 'No'}`);
+        }
+      }
+
+      // Log the update action
+      if (changes.length > 0) {
+        await logUserAction(
+          userId,
+          'update',
+          `Modificato utente ${user?.username || user?.full_name || userId}: ${changes.join(', ')}`
+        );
       }
 
       await fetchUsers();
@@ -113,6 +160,8 @@ export function useUsers() {
         return false;
       }
 
+      const userName = user?.username || user?.full_name || userId;
+
       // Delete user settings
       await supabase.from('user_settings').delete().eq('user_id', userId);
       
@@ -122,12 +171,18 @@ export function useUsers() {
       // Delete global shifts
       await supabase.from('global_shifts').delete().eq('assigned_to_user_id', userId);
       
+      // Delete leave requests
+      await supabase.from('leave_requests').delete().eq('user_id', userId);
+      
       // Delete user role
       await supabase.from('user_roles').delete().eq('user_id', userId);
       
       // Delete profile
       const { error } = await supabase.from('profiles').delete().eq('id', userId);
       if (error) throw error;
+
+      // Log the deletion
+      await logUserAction(userId, 'delete', `Eliminato utente: ${userName}`);
 
       setUsers(prev => prev.filter(u => u.id !== userId));
       toast.success('Utente eliminato');
@@ -139,11 +194,16 @@ export function useUsers() {
     }
   };
 
+  const createUserAuditLog = async (userId: string, action: string, details: string) => {
+    await logUserAction(userId, action, details);
+  };
+
   return {
     users,
     loading,
     updateUser,
     deleteUser,
+    createUserAuditLog,
     refetch: fetchUsers,
   };
 }

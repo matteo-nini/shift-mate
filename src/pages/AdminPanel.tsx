@@ -56,6 +56,8 @@ import {
   AlertCircle,
   CheckCircle,
   Loader2,
+  Building2,
+  Palette,
 } from 'lucide-react';
 import { Database } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -550,6 +552,85 @@ export function AdminPanel() {
                       <strong>Metodo per Turno:</strong> Ogni turno ha un valore fisso, indipendentemente dalla durata.
                     </p>
                   )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Brand Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="w-5 h-5" />
+                  Brand Aziendale
+                </CardTitle>
+                <CardDescription>
+                  Personalizza l'aspetto dell'applicazione con il tuo brand
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="company_name">Nome Azienda</Label>
+                  <Input
+                    id="company_name"
+                    value={pendingSettings.company_name || ''}
+                    onChange={e =>
+                      setPendingSettings({ ...pendingSettings, company_name: e.target.value })
+                    }
+                    placeholder="La Tua Azienda"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="company_logo">URL Logo Aziendale</Label>
+                  <Input
+                    id="company_logo"
+                    value={pendingSettings.company_logo_url || ''}
+                    onChange={e =>
+                      setPendingSettings({ ...pendingSettings, company_logo_url: e.target.value })
+                    }
+                    placeholder="https://esempio.it/logo.png"
+                  />
+                  {pendingSettings.company_logo_url && (
+                    <div className="mt-2 p-4 bg-muted/50 rounded-lg flex items-center justify-center">
+                      <img
+                        src={pendingSettings.company_logo_url}
+                        alt="Logo anteprima"
+                        className="max-h-16 max-w-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="primary_color" className="flex items-center gap-2">
+                    <Palette className="w-4 h-4" />
+                    Colore Primario
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="primary_color"
+                      type="color"
+                      value={pendingSettings.primary_color || '#2962FF'}
+                      onChange={e =>
+                        setPendingSettings({ ...pendingSettings, primary_color: e.target.value })
+                      }
+                      className="w-16 h-10 p-1 cursor-pointer"
+                    />
+                    <Input
+                      value={pendingSettings.primary_color || ''}
+                      onChange={e =>
+                        setPendingSettings({ ...pendingSettings, primary_color: e.target.value })
+                      }
+                      placeholder="#2962FF"
+                      className="flex-1"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Lascia vuoto per usare il colore predefinito
+                  </p>
                 </div>
               </CardContent>
             </Card>

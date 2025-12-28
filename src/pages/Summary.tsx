@@ -489,11 +489,11 @@ export function Summary() {
                           <TableCell>{formatHours(hours)}</TableCell>
                           <TableCell>
                             <Badge
-                              variant={type === 'contract' ? 'default' : 'secondary'}
                               className={cn(
+                                'font-semibold border-2',
                                 type === 'contract'
-                                  ? 'bg-shift-contract/20 text-shift-contract hover:bg-shift-contract/30'
-                                  : 'bg-shift-extra/20 text-shift-extra hover:bg-shift-extra/30'
+                                  ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90'
+                                  : 'bg-orange-500 text-white border-orange-500 hover:bg-orange-600'
                               )}
                             >
                               {type === 'contract' ? 'Contratto' : 'Extra'}
@@ -504,19 +504,14 @@ export function Summary() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleToggleStatus(shift)}
-                              className={cn(
-                                'h-auto py-1 px-2',
-                                shift.status === 'paid'
-                                  ? 'text-shift-contract'
-                                  : 'text-muted-foreground'
-                              )}
+                              className="h-auto py-1 px-2"
                             >
                               <Badge
-                                variant={shift.status === 'paid' ? 'default' : 'outline'}
                                 className={cn(
+                                  'font-semibold border-2',
                                   shift.status === 'paid'
-                                    ? 'bg-shift-contract/20 text-shift-contract'
-                                    : ''
+                                    ? 'bg-success text-success-foreground border-success hover:bg-success/90'
+                                    : 'bg-warning text-warning-foreground border-warning hover:bg-warning/90'
                                 )}
                               >
                                 {shift.status === 'paid' ? 'Pagato' : 'In attesa'}
