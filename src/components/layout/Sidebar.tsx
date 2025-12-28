@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBrandSettings } from '@/hooks/useBrandSettings';
 import {
   LayoutDashboard,
   Calendar,
@@ -41,6 +42,7 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   const { user, userRole, signOut } = useAuth();
+  const { brandSettings } = useBrandSettings();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -86,6 +88,8 @@ export function Sidebar() {
     userRole && item.roles.includes(userRole)
   );
 
+  const appName = brandSettings.company_name || 'ShiftManager';
+
   return (
     <motion.aside
       initial={false}
@@ -96,20 +100,34 @@ export function Sidebar() {
       {/* Header */}
       <div className="p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <motion.div
-            whileHover={{ rotate: 360 }}
-            transition={{ duration: 0.5 }}
-            className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0"
-          >
-            <Clock className="w-5 h-5 text-primary" />
-          </motion.div>
+          {brandSettings.company_logo_url ? (
+            <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-muted flex items-center justify-center">
+              <img 
+                src={brandSettings.company_logo_url} 
+                alt={appName}
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                  (e.target as HTMLImageElement).parentElement!.innerHTML = '<div class="w-5 h-5 text-primary"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>';
+                }}
+              />
+            </div>
+          ) : (
+            <motion.div
+              whileHover={{ rotate: 360 }}
+              transition={{ duration: 0.5 }}
+              className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0"
+            >
+              <Clock className="w-5 h-5 text-primary" />
+            </motion.div>
+          )}
           {!isCollapsed && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <h1 className="font-display font-bold text-lg text-foreground">ShiftManager</h1>
+              <h1 className="font-display font-bold text-lg text-foreground">{appName}</h1>
               <p className="text-xs text-muted-foreground capitalize">{userRole === 'admin' ? 'Amministratore' : 'Dipendente'}</p>
             </motion.div>
           )}
