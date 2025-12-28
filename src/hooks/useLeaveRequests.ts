@@ -90,6 +90,15 @@ export function useLeaveRequests() {
       status: 'approved' | 'rejected';
       review_notes?: string;
     }) => {
+      // Get request details first
+      const { data: request, error: fetchError } = await supabase
+        .from('leave_requests')
+        .select('user_id, request_type, start_date, end_date')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const { error } = await supabase
         .from('leave_requests')
         .update({
@@ -101,6 +110,31 @@ export function useLeaveRequests() {
         .eq('id', id);
 
       if (error) throw error;
+
+      // Get reviewer profile for email
+      const { data: reviewerProfile } = await supabase
+        .from('profiles')
+        .select('full_name, username')
+        .eq('id', user!.id)
+        .single();
+
+      // Send notification email
+      try {
+        await supabase.functions.invoke('notify-leave-request', {
+          body: {
+            user_id: request.user_id,
+            request_type: request.request_type,
+            start_date: request.start_date,
+            end_date: request.end_date,
+            status,
+            review_notes: review_notes || null,
+            reviewer_name: reviewerProfile?.full_name || reviewerProfile?.username || 'Admin',
+          },
+        });
+      } catch (emailError) {
+        console.error('Error sending notification email:', emailError);
+        // Don't fail the mutation if email fails
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leave-requests'] });
